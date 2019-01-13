@@ -558,6 +558,7 @@ def create_decoder_config(args: argparse.Namespace, encoder_num_hidden: int,
             layer_normalization=args.layer_normalization,
             attention_in_upper_layers=args.rnn_attention_in_upper_layers,
             state_init_lhuc=args.lhuc is not None and (C.LHUC_STATE_INIT in args.lhuc or C.LHUC_ALL in args.lhuc),
+            use_attention = not args.rnn_no_attention,
             enc_last_hidden_concat_to_embedding=args.rnn_enc_last_hidden_concat_to_embedding)
 
     return config_decoder
