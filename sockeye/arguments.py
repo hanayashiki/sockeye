@@ -883,6 +883,9 @@ def add_training_args(params):
                               default=(.0, .0),
                               help='Recurrent dropout without memory loss (Semeniuta, 2016) for encoder & decoder '
                                    'LSTMs. Use "x:x" to specify separate values. Default: %(default)s.')
+    train_params.add_argument('--rnn-no-attention',
+                              action="store_true",
+                              help='Disable attention mechanism,')
     train_params.add_argument('--rnn-enc-last-hidden-concat-to-embedding',
                               action="store_true",
                               help='Concatenate the last hidden layer of the encoder to the input of the decoder, '
