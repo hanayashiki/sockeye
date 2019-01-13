@@ -469,6 +469,7 @@ class RecurrentDecoderConfig(Config):
                  layer_normalization: bool = False,
                  attention_in_upper_layers: bool = False,
                  dtype: str = C.DTYPE_FP32,
+                 use_attention: bool = True,
                  enc_last_hidden_concat_to_embedding: bool = False) -> None:
 
         super().__init__()
@@ -482,6 +483,7 @@ class RecurrentDecoderConfig(Config):
         self.layer_normalization = layer_normalization
         self.attention_in_upper_layers = attention_in_upper_layers
         self.enc_last_hidden_concat_to_embedding = enc_last_hidden_concat_to_embedding
+        self.use_attention = use_attention
         self.dtype = dtype
 
 
@@ -875,17 +877,19 @@ class RecurrentDecoder(Decoder):
             # TODO: add context gating?
         else:
             upper_rnn_layer_states = []
-            hidden_concat = mx.sym.concat(rnn_pre_attention_output, attention_state.context,
-                                          dim=1, name='%shidden_concat_t%d' % (self.prefix, seq_idx))
-            if self.config.hidden_dropout > 0:
-                hidden_concat = mx.sym.Dropout(data=hidden_concat, p=self.config.hidden_dropout,
-                                               name='%shidden_concat_dropout_t%d' % (self.prefix, seq_idx))
+            if self.config.use_attention:
+                hidden_concat = mx.sym.concat(rnn_pre_attention_output, attention_state.context,
+                                             dim=1, name='%shidden_concat_t%d' % (self.prefix, seq_idx))
+                if self.config.hidden_dropout > 0:
+                    hidden_concat = mx.sym.Dropout(data=hidden_concat, p=self.config.hidden_dropout,
+                                                   name='%shidden_concat_dropout_t%d' % (self.prefix, seq_idx))
 
-            if self.config.context_gating:
-                hidden = self._context_gate(hidden_concat, rnn_pre_attention_output, attention_state, seq_idx)
+                if self.config.context_gating:
+                    hidden = self._context_gate(hidden_concat, rnn_pre_attention_output, attention_state, seq_idx)
+                else:
+                    hidden = self._hidden_mlp(hidden_concat, seq_idx)
             else:
-                hidden = self._hidden_mlp(hidden_concat, seq_idx)
-
+                hidden = self._hidden_mlp(rnn_pre_attention_output, seq_idx)
         return RecurrentDecoderState(hidden, rnn_pre_attention_layer_states + upper_rnn_layer_states), attention_state
 
     def _hidden_mlp(self, hidden_concat: mx.sym.Symbol, seq_idx: int) -> mx.sym.Symbol:
